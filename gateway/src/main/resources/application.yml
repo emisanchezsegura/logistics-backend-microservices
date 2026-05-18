@@ -1,0 +1,138 @@
+
+spring:
+  application:
+    name: gateway
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8091/realms/logistica-realm
+
+
+  cloud:
+    gateway:
+      httpclient:
+        connect-timeout: 5000     # tiempo para conectar (5s)
+        response-timeout: 15s     # tiempo máximo de espera de respuesta
+      routes:
+        # Ruta principal al microservicio Atención
+        - id: atencion
+          uri: http://servicio-atencion:8081
+          predicates:
+            - Path=/atencion/**
+          filters:
+            - StripPrefix=1
+            - RewritePath=/atencion/(?<segment>.*), /${segment}
+
+        # Ruta para redirigir el OpenAPI (Swagger JSON) del microservicio Atención
+        - id: atencion-openapi
+          uri: http://servicio-atencion:8081
+          predicates:
+            - Path=/v3/api-docs/atencion
+          filters:
+            - RewritePath=/v3/api-docs/atencion, /v3/api-docs
+
+        # Ruta principal al microservicio Transporte
+        - id: transporte
+          uri: http://servicio-transporte:8082
+          predicates:
+            - Path=/transporte/**
+          filters:
+            - StripPrefix=1
+            - RewritePath=/transporte/(?<segment>.*), /${segment}
+        # Ruta para redirigir el OpenAPI (Swagger JSON) del microservicio Transporte
+        - id: transporte-openapi
+          uri: http://servicio-transporte:8082
+          predicates:
+            - Path=/v3/api-docs/transporte
+          filters:
+            - RewritePath=/v3/api-docs/transporte, /v3/api-docs
+
+        # Ruta principal al microservicio Rutas
+        - id: rutas
+          uri: http://servicio-rutas:8084
+          predicates:
+            - Path=/rutas/**
+          filters:
+            - StripPrefix=1
+
+        # Ruta para redirigir el OpenAPI (Swagger JSON) del microservicio Rutas
+        - id: rutas-openapi
+          uri: http://servicio-rutas:8084
+          predicates:
+            - Path=/v3/api-docs/rutas
+          filters:
+            - RewritePath=/v3/api-docs/rutas, /v3/api-docs
+
+          # Ruta principal al microservicio Depósitos
+        - id: depositos
+          uri: http://servicio-depositos:8085
+          predicates:
+            - Path=/depositos/**
+          filters:
+            - StripPrefix=1
+            - RewritePath=/depositos/(?<segment>.*), /${segment}
+
+        # Ruta para redirigir el OpenAPI (Swagger JSON) del microservicio Depósitos
+        - id: depositos-openapi
+          uri: http://servicio-depositos:8085
+          predicates:
+            - Path=/v3/api-docs/depositos
+          filters:
+            - RewritePath=/v3/api-docs/depositos, /v3/api-docs
+
+        # ===============================
+        # SERVICIO TARIFAS
+        # ===============================
+        - id: tarifas
+          uri: http://servicio-tarifas:8086
+          predicates:
+            - Path=/tarifas/**
+          filters:
+            - StripPrefix=1
+            - RewritePath=/tarifas/(?<segment>.*), /${segment}
+
+        - id: tarifas-openapi
+          uri: http://servicio-tarifas:8086
+          predicates:
+            - Path=/v3/api-docs/tarifas
+          filters:
+            - RewritePath=/v3/api-docs/tarifas, /v3/api-docs
+
+
+  # Nivel de logs (opcional para debug)
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+
+# Configuración de Swagger central
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    urls:
+      - name: servicio-atencion
+        url: /v3/api-docs/atencion
+
+      - name: servicio-transporte
+        url: /v3/api-docs/transporte
+
+      - name: servicio-rutas
+        url: /v3/api-docs/rutas
+
+      - name: servicio-depositos
+        url: /v3/api-docs/depositos
+
+      - name: servicio-tarifas
+        url: /v3/api-docs/tarifas
+
+
+google:
+  api:
+    base-url: https://maps.googleapis.com/maps/api/distancematrix/json
+    key: ${GOOGLE_API_KEY}
+server:
+  port: 8080

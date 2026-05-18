@@ -1,0 +1,38 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: servicio-usuarios
+
+  datasource:
+    url: jdbc:postgresql://postgres:5432/logistica_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak/realms/logistica-realm
+          jwk-set-uri: http://keycloak:8091/realms/logistica-realm/protocol/openid-connect/certs
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: INFO
+  file:
+    name: myApp.log
+  logback:
+    rollingpolicy:
+      max-file-size: 1MB
+      max-history: 10

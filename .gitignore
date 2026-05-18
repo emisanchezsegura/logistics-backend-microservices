@@ -1,0 +1,29 @@
+# Maven
+target/
+*.jar
+*.war
+*.ear
+
+# Logs
+*.log
+logs/
+
+# Variables de entorno
+.env
+
+# Docker data / local databases
+data/
+postgres-data/
+keycloak-data/
+
+# IDE / editor
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Java
+*.class

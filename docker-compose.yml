@@ -1,0 +1,200 @@
+version: '3.8'
+
+services:
+  # -----------------------
+  # 📦 Base de datos PostgreSQL
+  # -----------------------
+  postgres:
+    image: postgres:15
+    container_name: postgres_logistica
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: logistica_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data   # 🔹 Persiste la DB
+    networks:
+      - logistica-net
+
+  # -----------------------
+  # 🔐 Keycloak
+  # -----------------------
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: keycloak_logistica
+    restart: always
+    command:
+      - start-dev
+      - --http-port=8091
+      - --hostname-strict=false
+      - --proxy=edge
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/logistica_db
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: postgres
+    ports:
+      - "8091:8091"
+    volumes:
+      - ./data/keycloak:/opt/keycloak/data  # 🔹 Persistencia del realm manual
+    depends_on:
+      - postgres
+    networks:
+      - logistica-net
+
+  # -----------------------
+  # 👥 Servicio Usuarios
+  # -----------------------
+  servicio-usuarios:
+    build: ./servicio-usuarios
+    container_name: servicio_usuarios
+    restart: always
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/logistica_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8091/realms/logistica-realm
+    ports:
+      - "8090:8090"
+    depends_on:
+      - postgres
+      - keycloak
+    networks:
+      - logistica-net
+
+  # -----------------------
+  # 🧾 Servicio Atención
+  # -----------------------
+  servicio-atencion:
+    build: ./servicio-atencion
+    container_name: servicio_atencion
+    restart: always
+    depends_on:
+      - postgres
+      - servicio-transporte
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/logistica_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    ports:
+      - "8081:8081"
+    networks:
+      - logistica-net
+
+  # -----------------------
+  # 🚚 Servicio Transporte
+  # -----------------------
+  servicio-transporte:
+    build: ./servicio-transporte
+    container_name: servicio_transporte
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/logistica_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    ports:
+      - "8082:8082"
+    networks:
+      - logistica-net
+
+  # -----------------------
+  # 🏢 Servicio Depósitos
+  # -----------------------
+  servicio-depositos:
+    build: ./servicio-depositos
+    container_name: servicio_depositos
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/logistica_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    ports:
+      - "8085:8085"
+    networks:
+      - logistica-net
+
+  # -----------------------
+  # 🗺️ Servicio Rutas
+  # -----------------------
+  servicio-rutas:
+    build: ./servicio-rutas
+    container_name: servicio_rutas
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/logistica_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      GOOGLE_API_KEY: AIzaSyAS8835WLuoH-pva_GbZ_Y45CvwESqCVow
+    ports:
+      - "8084:8084"
+    networks:
+      - logistica-net
+
+  # -----------------------
+  # 💰 Servicio Tarifas
+  # -----------------------
+  servicio-tarifas:
+    build: ./servicio-tarifas
+    container_name: servicio_tarifas
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/logistica_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    ports:
+      - "8086:8086"
+    networks:
+      - logistica-net
+
+  # -----------------------
+  # 🌐 Gateway
+  # -----------------------
+  gateway:
+    build: ./gateway
+    container_name: gateway
+    restart: always
+    depends_on:
+      - servicio-atencion
+      - servicio-transporte
+      - servicio-rutas
+      - servicio-depositos
+      - servicio-tarifas
+      - servicio-usuarios
+    ports:
+      - "8080:8080"
+    networks:
+      - logistica-net
+    
+  # -----------------------
+  # 🛠️ Adminer (GUI para ver la base)
+  # -----------------------
+  adminer:
+    image: adminer
+    container_name: adminer_logistica
+    restart: always
+    ports:
+      - "8092:8080"
+    depends_on:
+      - postgres
+    networks:
+      - logistica-net
+
+# -----------------------
+# 🌉 Red compartida
+# -----------------------
+networks:
+  logistica-net:
+    driver: bridge
